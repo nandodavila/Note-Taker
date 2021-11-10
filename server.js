@@ -1,7 +1,9 @@
 const express = require('express');
+const fs = require('fs')
 const path = require('path');
 const api = require('./routes/index.js');
 const notes = require('./db/db.json');
+const { uuid } = require('uuidv4')
 
 const PORT = process.env.PORT || 3001;
 
@@ -24,28 +26,52 @@ app.get('/notes', (req, res) =>
   res.sendFile(path.join(__dirname, '/public/notes.html'))
 );
 
-app.post('/notes', (req, res) => {
-  // Log that a POST request was received
+app.get('/api/notes', (req, res) => {
+fs.readFile('./db/db.json', 'utf8', (err, data) => {
+  if (err) {
+    console.error(err)  
+  } else {
+    res.json(JSON.parse(data))
+  }
+    
+})});
+
+app.post('/api/notes', (req, res) => {
   console.info(`${req.method} request received to add a note`);
 
-  // Prepare a response object to send back to the client
+
   const { title, text} = req.body;
 
-  // If all the required properties are present
+ 
   if (title && text) {
-    // Variable for the object we will save
+   
     const newNote = {
       title,
       text,
+      id: uuid()
     };
 
     const response = {
       status: 'success',
       body: newNote,
     };
-
-    console.log(response);
-    res.status(201).json(response);
+    
+    fs.readFile('./db/db.json', 'utf8', (err, data) => {
+      if (err) {
+        console.error(err);
+      } else {
+        const parsedNote = JSON.parse(data);
+        parsedNote.push(newNote);
+        fs.writeFile('./db/db.json', JSON.stringify(parsedNote), (err) => {
+          if (err) {
+            console.error(err)
+          } else {
+            res.json('Sucsess')
+          }
+        })
+      }
+    });
+    console.log('sucsess')
   } else {
     res.status(500).json('Error in posting review');
   }
